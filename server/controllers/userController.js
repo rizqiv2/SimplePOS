@@ -1,4 +1,5 @@
 const { User } = require('../models');
+const auditLog = require('../utils/auditLogger');
 
 exports.getUsers = async (req, res, next) => {
   try {
@@ -51,6 +52,7 @@ exports.updateUser = async (req, res, next) => {
     await user.update(updateData);
     const updated = await User.findByPk(user.id, { attributes: { exclude: ['password'] } });
 
+    await auditLog(req.user.id, 'UPDATE', 'User', user.id, { username: user.username, changes: Object.keys(updateData) }, req);
     res.status(200).json({ success: true, data: updated, message: 'User updated successfully' });
   } catch (error) {
     next(error);
@@ -64,6 +66,7 @@ exports.deleteUser = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     await user.destroy();
+    await auditLog(req.user.id, 'DELETE', 'User', user.id, { username: user.username, email: user.email }, req);
     res.status(200).json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
     next(error);

@@ -22,8 +22,11 @@ const Dashboard = () => {
         const todayStr = today.toISOString();
         const endStr = new Date().toISOString();
 
+        const summaryParams = { startDate: todayStr, endDate: endStr };
+        if (user?.role === 'cashier') summaryParams.cashierId = user.id;
+
         const [summaryRes, lowStockRes, productsRes] = await Promise.all([
-          getSalesSummary({ startDate: todayStr, endDate: endStr }).catch(() => null),
+          getSalesSummary(summaryParams).catch(() => null),
           getLowStockProducts().catch(() => ({ data: { data: [] } })),
           getProducts({ limit: 5 }).catch(() => null)
         ]);
@@ -121,7 +124,7 @@ const Dashboard = () => {
             <button onClick={() => navigate('/customers')} className="w-full text-left px-4 py-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 text-sm font-medium">
               View Customers
             </button>
-            {(user?.role === 'admin' || user?.role === 'manager') && (
+            {['admin', 'manager', 'cashier'].includes(user?.role) && (
               <button onClick={() => navigate('/reports')} className="w-full text-left px-4 py-3 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 text-sm font-medium">
                 View Reports
               </button>

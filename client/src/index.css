@@ -161,8 +161,16 @@
     size: 80mm auto;
   }
 
+  body * {
+    visibility: hidden;
+  }
+
   .receipt-screen {
     display: none !important;
+  }
+
+  .receipt-print, .receipt-print * {
+    visibility: visible;
   }
 
   .receipt-print {

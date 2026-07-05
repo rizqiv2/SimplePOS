@@ -23,7 +23,7 @@ const Users = () => {
     try {
       const token = localStorage.getItem('token');
       const isEdit = !!editing;
-      const url = isEdit ? `/api/users/${editing._id}` : '/api/auth/register';
+      const url = isEdit ? `/api/users/${editing.id}` : '/api/auth/register';
       const method = isEdit ? 'PUT' : 'POST';
       const body = isEdit ? { username: form.username, email: form.email, role: form.role } : form;
 
@@ -77,7 +77,7 @@ const Users = () => {
             </thead>
             <tbody className="divide-y">
               {users.map(u => (
-                <tr key={u._id} className="hover:bg-gray-50">
+                <tr key={u.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{u.username}</td>
                   <td className="px-4 py-3 text-gray-500">{u.email}</td>
                   <td className="px-4 py-3 text-center">
@@ -85,7 +85,7 @@ const Users = () => {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button onClick={() => handleEdit(u)} className="text-blue-600 hover:text-blue-800 mr-2">Edit</button>
-                    <button onClick={() => handleDelete(u._id)} className="text-red-600 hover:text-red-800">Delete</button>
+                    <button onClick={() => handleDelete(u.id)} className="text-red-600 hover:text-red-800">Delete</button>
                   </td>
                 </tr>
               ))}
@@ -96,8 +96,8 @@ const Users = () => {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setShowForm(false); setEditing(null); }}>
-          <div className="bg-white rounded-lg p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={() => { setShowForm(false); setEditing(null); }}>
+          <div className="bg-white rounded-t-xl sm:rounded-lg p-6 w-full sm:max-w-md" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-semibold mb-4">{editing ? 'Edit User' : 'Add User'}</h2>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Username *</label><input type="text" required value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="w-full border rounded px-3 py-2 text-sm" /></div>

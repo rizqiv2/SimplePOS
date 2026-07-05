@@ -3,7 +3,8 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { connectDB } = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
-const { User, Product, Category, Customer, Supplier, Sale, Setting } = require('./models');
+const { User, Product, Category, Customer, Supplier, Sale, Setting, AuditLog } = require('./models');
+const { sequelize } = require('./config/db');
 
 dotenv.config({ path: __dirname + '/.env' });
 
@@ -17,12 +18,16 @@ const seedDatabase = async () => {
   console.log('Seeding database...');
 
   // Delete in reverse FK dependency order
-  await User.destroy({ where: {} });
   await Sale.destroy({ where: {} });
   await Product.destroy({ where: {} });
+  await AuditLog.destroy({ where: {} });
   await Customer.destroy({ where: {} });
+  await User.destroy({ where: {} });
   await Category.destroy({ where: {} });
   await Supplier.destroy({ where: {} });
+
+  // Reset SQLite auto-increment counters
+  await sequelize.query("DELETE FROM sqlite_sequence");
 
   const users = await User.bulkCreate([
     { username: 'admin', email: 'admin@pos.com', password: 'admin123', role: 'admin' },
@@ -67,7 +72,21 @@ const seedDatabase = async () => {
 
   await Setting.bulkCreate([
     { key: 'currency', value: 'USD' },
-    { key: 'locale', value: 'en-US' }
+    { key: 'locale', value: 'en-US' },
+    { key: 'tax_rate', value: '8' },
+    { key: 'tax_inclusive', value: 'false' },
+    { key: 'service_charge_enabled', value: 'false' },
+    { key: 'service_charge_rate', value: '5' },
+    { key: 'rounding_mode', value: 'none' },
+    { key: 'default_payment', value: 'cash' },
+    { key: 'receipt_auto_print', value: 'false' },
+    { key: 'cashier_hide_prices', value: 'false' },
+    { key: 'cashier_hide_stock', value: 'false' },
+    { key: 'order_types', value: '["Dine-in","Takeaway","Delivery"]' },
+    { key: 'store_name', value: 'My Store' },
+    { key: 'store_address', value: '' },
+    { key: 'store_phone', value: '' },
+    { key: 'receipt_footer', value: 'Thank you for your purchase!' }
   ], { ignoreDuplicates: true });
 
   console.log('Database seeded successfully!');
@@ -99,6 +118,7 @@ const startServer = async () => {
     app.use('/api/sales', require('./routes/sales'));
     app.use('/api/reports', require('./routes/reports'));
     app.use('/api/settings', require('./routes/settings'));
+    app.use('/api/audit-logs', require('./routes/auditLogs'));
 
     app.use(errorHandler);
 

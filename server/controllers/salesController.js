@@ -1,5 +1,6 @@
 const { Sale, Product, Customer } = require('../models');
 const { Op } = require('sequelize');
+const auditLog = require('../utils/auditLogger');
 
 const generateTransactionId = () => {
   const timestamp = Date.now().toString(36);
@@ -9,7 +10,7 @@ const generateTransactionId = () => {
 
 exports.createSale = async (req, res, next) => {
   try {
-    const { items, customerId, subtotal, tax, discount, total, paymentMethod, notes } = req.body;
+    const { items, customerId, subtotal, tax, discount, serviceCharge, orderType, total, paymentMethod, notes } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ success: false, message: 'Please provide at least one item' });
@@ -38,6 +39,8 @@ exports.createSale = async (req, res, next) => {
       subtotal,
       tax,
       discount,
+      serviceCharge: serviceCharge || 0,
+      orderType: orderType || 'Dine-in',
       total,
       paymentMethod,
       cashierId: req.user.id,
@@ -61,6 +64,7 @@ exports.createSale = async (req, res, next) => {
       }
     }
 
+    await auditLog(req.user.id, 'CREATE', 'Sale', sale.id, { transactionId: sale.transactionId, total: sale.total, paymentMethod: sale.paymentMethod, orderType: sale.orderType }, req);
     res.status(201).json({ success: true, data: sale, message: 'Sale completed successfully' });
   } catch (error) {
     next(error);
@@ -164,6 +168,7 @@ exports.voidTransaction = async (req, res, next) => {
     }
 
     await sale.update({ status: 'void' });
+    await auditLog(req.user.id, 'VOID', 'Sale', sale.id, { transactionId: sale.transactionId, total: sale.total }, req);
     res.status(200).json({ success: true, message: 'Transaction voided successfully' });
   } catch (error) {
     next(error);

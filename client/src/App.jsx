@@ -10,6 +10,8 @@ import Customers from './pages/Customers';
 import Reports from './pages/Reports';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
+import AuditLogs from './pages/AuditLogs';
+import Transactions from './pages/Transactions';
 import Layout from './components/Layout/Layout';
 
 function App() {
@@ -29,12 +31,13 @@ function App() {
             >
               <Route index element={<Dashboard />} />
               <Route path="pos" element={<POS />} />
+              <Route path="transactions" element={<Transactions />} />
               <Route path="inventory" element={<Inventory />} />
               <Route path="customers" element={<Customers />} />
               <Route
                 path="reports"
                 element={
-                  <ProtectedRoute roles={['admin', 'manager']}>
+                  <ProtectedRoute roles={['admin', 'manager', 'cashier']}>
                     <Reports />
                   </ProtectedRoute>
                 }
@@ -52,6 +55,14 @@ function App() {
                 element={
                   <ProtectedRoute roles={['admin']}>
                     <Settings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="audit-logs"
+                element={
+                  <ProtectedRoute roles={['admin']}>
+                    <AuditLogs />
                   </ProtectedRoute>
                 }
               />

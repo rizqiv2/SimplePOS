@@ -1,6 +1,7 @@
 const { User } = require('../models');
 const generateToken = require('../utils/generateToken');
 const bcrypt = require('bcryptjs');
+const auditLog = require('../utils/auditLogger');
 
 exports.register = async (req, res, next) => {
   try {
@@ -16,6 +17,8 @@ exports.register = async (req, res, next) => {
 
     const user = await User.create({ username, email, password, role: role || 'cashier' });
     const token = generateToken(user.id);
+
+    await auditLog(user.id, 'REGISTER', 'User', user.id, { username: user.username, email: user.email, role: user.role }, req);
 
     res.status(201).json({
       success: true,
@@ -63,6 +66,8 @@ exports.login = async (req, res, next) => {
     }
 
     const token = generateToken(user.id);
+
+    await auditLog(user.id, 'LOGIN', 'User', user.id, { username: user.username }, req);
 
     res.status(200).json({
       success: true,

@@ -1,5 +1,6 @@
 const { Product, Category, Supplier } = require('../models');
 const { Op, where: seqWhere, col } = require('sequelize');
+const auditLog = require('../utils/auditLogger');
 
 exports.getProducts = async (req, res, next) => {
   try {
@@ -63,6 +64,7 @@ exports.getProduct = async (req, res, next) => {
 exports.createProduct = async (req, res, next) => {
   try {
     const product = await Product.create(req.body);
+    await auditLog(req.user.id, 'CREATE', 'Product', product.id, { name: product.name, sku: product.sku }, req);
     res.status(201).json({ success: true, data: product, message: 'Product created successfully' });
   } catch (error) {
     next(error);
@@ -76,6 +78,7 @@ exports.updateProduct = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
     await product.update(req.body);
+    await auditLog(req.user.id, 'UPDATE', 'Product', product.id, { name: product.name, changes: Object.keys(req.body) }, req);
     res.status(200).json({ success: true, data: product, message: 'Product updated successfully' });
   } catch (error) {
     next(error);
@@ -89,6 +92,7 @@ exports.deleteProduct = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
     await product.update({ status: 'inactive' });
+    await auditLog(req.user.id, 'DELETE', 'Product', product.id, { name: product.name, sku: product.sku }, req);
     res.status(200).json({ success: true, message: 'Product deleted successfully' });
   } catch (error) {
     next(error);
@@ -108,6 +112,7 @@ exports.adjustStock = async (req, res, next) => {
     }
 
     await product.update({ stock: quantity });
+    await auditLog(req.user.id, 'STOCK_ADJUST', 'Product', product.id, { name: product.name, previousStock: product.stock, newStock: quantity }, req);
     res.status(200).json({ success: true, data: product, message: 'Stock adjusted successfully' });
   } catch (error) {
     next(error);

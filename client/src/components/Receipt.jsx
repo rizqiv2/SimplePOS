@@ -1,8 +1,9 @@
 import { formatCurrency, formatDateTime } from '../utils/formatters';
 
-const STORE_NAME = 'WARKOP JAYA ABADI';
-const STORE_ADDRESS = 'Jl. Merdeka No. 42, Jakarta';
-const STORE_PHONE = '021-5551234';
+const storeName = () => localStorage.getItem('pos_store_name') || 'My Store';
+const storeAddress = () => localStorage.getItem('pos_store_address') || '';
+const storePhone = () => localStorage.getItem('pos_store_phone') || '';
+const receiptFooter = () => localStorage.getItem('pos_receipt_footer') || 'Thank you for your purchase!';
 
 const ReceiptDivider = () => <div className="receipt-divider" />;
 const ReceiptThinDivider = () => <div className="receipt-thin-divider" />;
@@ -14,9 +15,9 @@ const Receipt = ({ sale, customerName, cashierName }) => {
   return (
     <div className="receipt">
       <div className="receipt-header">
-        <div className="receipt-store-name">{STORE_NAME}</div>
-        <div className="receipt-store-info">{STORE_ADDRESS}</div>
-        <div className="receipt-store-info">{STORE_PHONE}</div>
+        <div className="receipt-store-name">{storeName()}</div>
+        {storeAddress() && <div className="receipt-store-info">{storeAddress()}</div>}
+        {storePhone() && <div className="receipt-store-info">{storePhone()}</div>}
       </div>
 
       <ReceiptDivider />
@@ -69,6 +70,12 @@ const Receipt = ({ sale, customerName, cashierName }) => {
           <span>Tax</span>
           <span>{formatCurrency(sale.tax)}</span>
         </div>
+        {sale.serviceCharge > 0 && (
+          <div className="receipt-line">
+            <span>Service Charge</span>
+            <span>{formatCurrency(sale.serviceCharge)}</span>
+          </div>
+        )}
         {sale.discount > 0 && (
           <div className="receipt-line">
             <span>Discount</span>
@@ -89,6 +96,12 @@ const Receipt = ({ sale, customerName, cashierName }) => {
           <span>Payment</span>
           <span className="receipt-capitalize">{sale.paymentMethod}</span>
         </div>
+        {sale.orderType && (
+          <div className="receipt-line">
+            <span>Order</span>
+            <span>{sale.orderType}</span>
+          </div>
+        )}
         {customerName && (
           <div className="receipt-line">
             <span>Customer</span>
@@ -100,8 +113,7 @@ const Receipt = ({ sale, customerName, cashierName }) => {
       <ReceiptDivider />
 
       <div className="receipt-footer">
-        <div className="receipt-thanks">Terima Kasih</div>
-        <div className="receipt-footer-note">Barang yang sudah dibeli tidak dapat dikembalikan</div>
+        <div className="receipt-thanks">{receiptFooter()}</div>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 const { Customer, Sale } = require('../models');
 const { Op } = require('sequelize');
+const auditLog = require('../utils/auditLogger');
 
 exports.getCustomers = async (req, res, next) => {
   try {
@@ -47,6 +48,7 @@ exports.getCustomer = async (req, res, next) => {
 exports.createCustomer = async (req, res, next) => {
   try {
     const customer = await Customer.create(req.body);
+    await auditLog(req.user.id, 'CREATE', 'Customer', customer.id, { name: customer.name, email: customer.email }, req);
     res.status(201).json({ success: true, data: customer, message: 'Customer created successfully' });
   } catch (error) {
     next(error);
@@ -60,6 +62,7 @@ exports.updateCustomer = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Customer not found' });
     }
     await customer.update(req.body);
+    await auditLog(req.user.id, 'UPDATE', 'Customer', customer.id, { name: customer.name, changes: Object.keys(req.body) }, req);
     res.status(200).json({ success: true, data: customer, message: 'Customer updated successfully' });
   } catch (error) {
     next(error);
@@ -73,6 +76,7 @@ exports.deleteCustomer = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Customer not found' });
     }
     await customer.destroy();
+    await auditLog(req.user.id, 'DELETE', 'Customer', customer.id, { name: customer.name }, req);
     res.status(200).json({ success: true, message: 'Customer deleted successfully' });
   } catch (error) {
     next(error);
@@ -104,6 +108,7 @@ exports.updateLoyaltyPoints = async (req, res, next) => {
     }
 
     await customer.update({ loyaltyPoints: points });
+    await auditLog(req.user.id, 'UPDATE', 'Customer', customer.id, { name: customer.name, loyaltyPoints: points }, req);
     res.status(200).json({ success: true, data: customer, message: 'Loyalty points updated successfully' });
   } catch (error) {
     next(error);

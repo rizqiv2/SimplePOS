@@ -5,6 +5,7 @@ const Customer = require('./Customer');
 const Sale = require('./Sale');
 const Supplier = require('./Supplier');
 const Setting = require('./Setting');
+const AuditLog = require('./AuditLog');
 
 // Set up associations
 Product.belongsTo(Category, { foreignKey: 'categoryId', as: 'category' });
@@ -21,6 +22,8 @@ User.hasMany(Sale, { foreignKey: 'cashierId', as: 'sales' });
 
 Category.belongsTo(Category, { foreignKey: 'parentCategoryId', as: 'parentCategory' });
 
+AuditLog.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
 module.exports = {
   User,
   Product,
@@ -28,5 +31,6 @@ module.exports = {
   Customer,
   Sale,
   Supplier,
-  Setting
+  Setting,
+  AuditLog
 };

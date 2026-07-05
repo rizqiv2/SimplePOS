@@ -92,8 +92,8 @@ const Customers = () => {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setShowForm(false); setEditing(null); }}>
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={() => { setShowForm(false); setEditing(null); }}>
+          <div className="bg-white rounded-t-xl sm:rounded-lg p-6 w-full sm:max-w-lg" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-semibold mb-4">{editing ? 'Edit Customer' : 'Add Customer'}</h2>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Name *</label><input type="text" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full border rounded px-3 py-2 text-sm" /></div>

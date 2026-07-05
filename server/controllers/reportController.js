@@ -3,13 +3,14 @@ const { Op, fn, col } = require('sequelize');
 
 exports.getSalesSummary = async (req, res, next) => {
   try {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, cashierId } = req.query;
     const where = { status: 'completed' };
     if (startDate || endDate) {
       where.createdAt = {};
       if (startDate) where.createdAt[Op.gte] = new Date(startDate);
       if (endDate) where.createdAt[Op.lte] = new Date(endDate);
     }
+    if (cashierId) where.cashierId = cashierId;
 
     const summary = await Sale.findOne({
       where,

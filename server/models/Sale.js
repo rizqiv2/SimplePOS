@@ -35,6 +35,14 @@ const Sale = sequelize.define('Sale', {
     type: DataTypes.DECIMAL(10, 2),
     defaultValue: 0
   },
+  serviceCharge: {
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0
+  },
+  orderType: {
+    type: DataTypes.STRING,
+    defaultValue: 'Dine-in'
+  },
   total: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false

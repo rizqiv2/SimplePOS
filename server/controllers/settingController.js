@@ -1,4 +1,5 @@
 const { Setting } = require('../models');
+const auditLog = require('../utils/auditLogger');
 
 exports.getSettings = async (req, res, next) => {
   try {
@@ -20,6 +21,7 @@ exports.updateSettings = async (req, res, next) => {
     const settings = await Setting.findAll({ raw: true });
     const map = {};
     for (const s of settings) map[s.key] = s.value;
+    await auditLog(req.user.id, 'UPDATE', 'Setting', null, { changes: entries }, req);
     res.status(200).json({ success: true, data: map, message: 'Settings updated successfully' });
   } catch (error) {
     next(error);

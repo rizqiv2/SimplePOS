@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { getProducts, createProduct, updateProduct, deleteProduct } from '../services/productService';
 import { formatCurrency } from '../utils/formatters';
 
 const Inventory = () => {
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -62,13 +64,17 @@ const Inventory = () => {
     setShowForm(true);
   };
 
+  const isCashier = user?.role === 'cashier';
+  const hidePrices = isCashier && localStorage.getItem('pos_cashier_hide_prices') === 'true';
+  const hideStock = isCashier && localStorage.getItem('pos_cashier_hide_stock') === 'true';
+
   if (loading) return <div className="flex items-center justify-center h-64"><div className="text-gray-500">Loading...</div></div>;
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Inventory</h1>
-        <button onClick={openCreate} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">+ Add Product</button>
+        {!isCashier && <button onClick={openCreate} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">+ Add Product</button>}
       </div>
 
       <div className="bg-white rounded-lg shadow">
@@ -81,11 +87,11 @@ const Inventory = () => {
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Name</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">SKU</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Price</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Stock</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Min Stock</th>
+                {!hidePrices && <th className="text-right px-4 py-3 font-medium text-gray-600">Price</th>}
+                {!hideStock && <th className="text-right px-4 py-3 font-medium text-gray-600">Stock</th>}
+                {!hideStock && <th className="text-right px-4 py-3 font-medium text-gray-600">Min Stock</th>}
                 <th className="text-center px-4 py-3 font-medium text-gray-600">Status</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>
+                {!isCashier && <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -93,16 +99,18 @@ const Inventory = () => {
                 <tr key={p.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{p.name}</td>
                   <td className="px-4 py-3 text-gray-500">{p.sku}</td>
-                  <td className="px-4 py-3 text-right">{formatCurrency(p.price)}</td>
-                  <td className={`px-4 py-3 text-right font-medium ${p.stock <= p.minStock ? 'text-red-600' : ''}`}>{p.stock}</td>
-                  <td className="px-4 py-3 text-right text-gray-500">{p.minStock}</td>
+                  {!hidePrices && <td className="px-4 py-3 text-right">{formatCurrency(p.price)}</td>}
+                  {!hideStock && <td className={`px-4 py-3 text-right font-medium ${p.stock <= p.minStock ? 'text-red-600' : ''}`}>{p.stock}</td>}
+                  {!hideStock && <td className="px-4 py-3 text-right text-gray-500">{p.minStock}</td>}
                   <td className="px-4 py-3 text-center">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{p.status}</span>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <button onClick={() => handleEdit(p)} className="text-blue-600 hover:text-blue-800 mr-2">Edit</button>
-                    <button onClick={() => handleDelete(p.id)} className="text-red-600 hover:text-red-800">Delete</button>
-                  </td>
+                  {!isCashier && (
+                    <td className="px-4 py-3 text-right">
+                      <button onClick={() => handleEdit(p)} className="text-blue-600 hover:text-blue-800 mr-2">Edit</button>
+                      <button onClick={() => handleDelete(p.id)} className="text-red-600 hover:text-red-800">Delete</button>
+                    </td>
+                  )}
                 </tr>
               ))}
               {products.length === 0 && (
@@ -114,8 +122,8 @@ const Inventory = () => {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setShowForm(false); setEditing(null); }}>
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={() => { setShowForm(false); setEditing(null); }}>
+          <div className="bg-white rounded-t-xl sm:rounded-lg p-6 w-full sm:max-w-lg" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-semibold mb-4">{editing ? 'Edit Product' : 'Add Product'}</h2>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
