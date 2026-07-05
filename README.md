@@ -73,7 +73,7 @@ A full-featured Point of Sale (POS) system built with React, Node.js, Express, a
 
 1. **Navigate to the project directory**
    ```bash
-   cd testtoken
+   cd SimplePOS
    ```
 
 2. **Install all dependencies**
@@ -149,7 +149,7 @@ A full-featured Point of Sale (POS) system built with React, Node.js, Express, a
 ## Project Structure
 
 ```
-testtoken/
+SimplePOS/
 ├── client/                   # React frontend
 │   ├── src/
 │   │   ├── components/       # Reusable UI components (Layout, Receipt, ProtectedRoute)
