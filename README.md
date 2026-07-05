@@ -1,20 +1,51 @@
 # POS System - Point of Sale Application
 
-A full-featured Point of Sale (POS) system built with React, Node.js, Express, and SQLite. Supports multi-user role-based access, inventory management, customer loyalty, thermal receipt printing, audit logging, and customizable currency/locale settings.
+A full-featured Point of Sale (POS) system built with React, Node.js, Express, and SQLite. Supports multi-user role-based access, inventory management, customer loyalty, thermal receipt printing, audit logging, customizable settings (currency, locale, tax, fees, store info), order types, and cashier restrictions.
 
 ## Features
 
 ### Core Functionality
 - **Multi-User Authentication**: Role-based access control (Admin, Manager, Cashier) with JWT
-- **Point of Sale Interface**: Fast product search (name/SKU/barcode), cart management, discounts, payment (cash/card)
-- **Inventory Management**: Product CRUD, stock tracking, low-stock alerts, SKU/barcode support
+- **Point of Sale Interface**: Fast product search (name/SKU/barcode), cart management, discounts, order types (Dine-in/Takeaway/Delivery/Pickup/Curbside), payment (cash/card)
+- **Inventory Management**: Product CRUD, stock tracking (auto-decrements on sale), low-stock alerts, SKU/barcode support
 - **Customer Management**: Profiles, purchase history, loyalty points system
-- **Sales Management**: Transaction processing, void transactions, receipt printing
-- **Reports & Analytics**: Sales summaries, revenue charts, top products, inventory valuation
-- **Audit Logging**: Track all CREATE, UPDATE, DELETE, VOID, LOGIN, and STOCK_ADJUST actions
-- **Settings**: Configurable currency (15 currencies + custom) and locale (12 locales) with live preview
-- **Thermal Receipt Printing**: 80mm thermal printer support via `window.print()` with `@page { size: 80mm auto }`
-- **Mobile Responsive**: Hamburger navigation, stacked POS layout, bottom-sheet modals on phone/tablet
+- **Transaction History**: Searchable, filterable sales list for all roles; cashiers see only their own
+- **Sales Management**: Transaction processing, void transactions (with stock restoration), receipt printing
+- **Reports & Analytics**: Sales summaries, revenue charts, top products, inventory valuation, cashier performance
+- **Audit Logging**: Track all CREATE, UPDATE, DELETE, VOID, LOGIN, and STOCK_ADJUST actions with user, IP, and details
+- **Dashboard**: Today's sales, transaction count, low stock alerts, quick actions
+
+### Configurable Settings (Admin)
+
+| Section | Options |
+|---------|---------|
+| **Store Information** | Store name, address, phone, receipt footer message |
+| **Tax & Fees** | Tax rate (%), tax inclusive toggle, service charge (on/off + rate %) |
+| **POS Behavior** | Rounding mode (none / $0.05 / $0.10 / whole $), default payment (cash/card), auto-print receipt |
+| **Cashier Restrictions** | Hide prices from cashiers, hide stock counts from cashiers |
+| **Order Types** | Toggle Dine-in, Takeaway, Delivery, Pickup, Curbside — shown as tabs in POS |
+| **Currency & Regional** | 15 preset currencies + custom code, 12 locales, live preview |
+
+### Thermal Receipt Printing
+- 80mm thermal printer support via `window.print()` with `@page { size: 80mm auto }`
+- Store name, address, phone from settings
+- Line items, quantities, prices, subtotals, service charge, discount, tax, total
+- Order type, payment method, customer name
+- Customizable footer message
+- Hidden page UI during print (`visibility: hidden` on all body elements except receipt)
+
+### Mobile Responsive
+- Hamburger navigation on mobile, horizontal nav on desktop
+- POS stacks vertically on mobile (products above, cart below)
+- Bottom-sheet modals on phone (`items-end sm:items-center`)
+- Tables horizontally scrollable
+- Adaptive product grid (2 cols mobile → 3 tablet → 4 desktop)
+
+### Cashier Workflow
+- Dashboard shows their own today's sales and transaction count
+- Transaction history filtered to their own sales only
+- Optional price/stock hiding via admin settings
+- Can view reports for end-of-shift data
 
 ### Tech Stack
 
@@ -35,7 +66,6 @@ A full-featured Point of Sale (POS) system built with React, Node.js, Express, a
 ## Getting Started
 
 ### Prerequisites
-
 - Node.js (v18 or higher)
 - npm or yarn
 
@@ -76,15 +106,12 @@ A full-featured Point of Sale (POS) system built with React, Node.js, Express, a
    The database auto-seeds on startup with sample data.
 
 ### How It Works
-
-- The server (`server/server-dev.js`) starts and auto-creates an SQLite database file (`server/database.sqlite`) if one doesn't exist
+- The server (`server/server-dev.js`) starts and auto-creates an SQLite database file (`server/database.sqlite`)
 - Tables are synchronized via Sequelize models
 - Sample data is seeded automatically: users, categories, suppliers, products, customers, and settings
 - The client Vite dev server proxies `/api` requests to the backend at `localhost:5000`
 
 ## Default Login Credentials
-
-After seeding, use these credentials:
 
 | Role    | Email              | Password |
 |---------|--------------------|----------|
@@ -98,22 +125,26 @@ After seeding, use these credentials:
 - Full access to all features
 - User management (create, edit, delete)
 - Audit log viewer
-- Settings (currency, locale)
+- Settings (store info, tax, fees, POS behavior, currency, locale)
 - Reports and analytics
 - Void transactions
 
 ### Manager
 - Reports and analytics
 - Full inventory management
+- Transaction history
 - Void transactions
-- Cannot manage users or view audit logs
+- Cannot manage users or view audit logs/settings
 
 ### Cashier
-- POS system only
+- POS register (create sales, apply discounts, select order types)
 - View products and customers
-- Create sales transactions
-- No edit/delete on products/customers
-- No reports, users, audit logs, or settings
+- Dashboard with their own today's sales and transaction count
+- Transaction history (their own sales only)
+- Reports (end-of-shift data)
+- Cannot edit/delete products or customers
+- No user management, audit logs, or settings
+- Optionally restricted from seeing prices and stock (admin configurable)
 
 ## Project Structure
 
@@ -123,8 +154,8 @@ testtoken/
 │   ├── src/
 │   │   ├── components/       # Reusable UI components (Layout, Receipt, ProtectedRoute)
 │   │   ├── context/          # React Context providers (AuthContext, CartContext)
-│   │   ├── pages/            # Page components (Login, Dashboard, POS, Inventory, Customers, Reports, Users, Settings, AuditLogs)
-│   │   ├── services/         # API service layer (api, authService, productService, customerService, salesService, reportService, settingService, auditLogService)
+│   │   ├── pages/            # Pages (Login, Dashboard, POS, Inventory, Customers, Transactions, Reports, Users, Settings, AuditLogs)
+│   │   ├── services/         # API service layer
 │   │   └── utils/            # Utility functions (formatters with dynamic currency/locale)
 │   ├── vite.config.js        # Vite config with API proxy
 │   └── package.json
@@ -152,11 +183,11 @@ testtoken/
 ### Products
 - `GET /api/products` - List products (search, filter by status, pagination)
 - `GET /api/products/:id` - Get product details
+- `GET /api/products/low-stock` - Low stock alerts
 - `POST /api/products` - Create product (admin/manager)
 - `PUT /api/products/:id` - Update product (admin/manager)
 - `DELETE /api/products/:id` - Soft delete (set status=inactive)
-- `PUT /api/products/:id/stock` - Adjust stock level
-- `GET /api/products/low-stock` - Low stock alerts
+- `PUT /api/products/:id/stock` - Adjust stock level (admin/manager)
 
 ### Customers
 - `GET /api/customers` - List customers (search, pagination)
@@ -167,17 +198,17 @@ testtoken/
 - `PUT /api/customers/:id/points` - Update loyalty points
 
 ### Sales
-- `POST /api/sales` - Create new sale
-- `GET /api/sales` - List sales (filters, pagination)
+- `POST /api/sales` - Create new sale (auto-decrements stock, awards loyalty points)
+- `GET /api/sales` - List sales (filters: status, paymentMethod, cashierId, date range; pagination)
 - `GET /api/sales/:id` - Get sale details
-- `PUT /api/sales/:id/void` - Void transaction
+- `PUT /api/sales/:id/void` - Void transaction (admin/manager; restores stock and reverses loyalty)
 
 ### Reports
-- `GET /api/reports/sales-summary` - Aggregated sales summary
-- `GET /api/reports/revenue` - Revenue over time
-- `GET /api/reports/top-products` - Best-selling products
-- `GET /api/reports/inventory-value` - Inventory valuation
-- `GET /api/reports/cashier-performance` - Per-user sales stats
+- `GET /api/reports/sales-summary` - Aggregated sales summary (all roles; cashiers can filter by cashierId)
+- `GET /api/reports/revenue` - Revenue over time (admin/manager)
+- `GET /api/reports/top-products` - Best-selling products (admin/manager)
+- `GET /api/reports/inventory-value` - Inventory valuation (admin/manager)
+- `GET /api/reports/cashier-performance` - Per-user sales stats (admin/manager)
 
 ### Users
 - `GET /api/users` - List users (admin only)
@@ -212,7 +243,7 @@ testtoken/
 | sku         | TEXT    | Required, unique         |
 | description | TEXT    | Optional                 |
 | price       | REAL    | Required                 |
-| stock       | INTEGER | Current stock level      |
+| stock       | INTEGER | Auto-decremented on sale |
 | minStock    | INTEGER | Low stock threshold      |
 | barcode     | TEXT    | Optional                 |
 | status      | TEXT    | active or inactive       |
@@ -223,23 +254,27 @@ testtoken/
 | id             | INTEGER | Auto-increment              |
 | transactionId  | TEXT    | Unique transaction code     |
 | items          | JSON    | Array of line items         |
+| customerId     | INTEGER | References Customer         |
 | subtotal       | REAL    |                             |
-| tax            | REAL    | 8% default                  |
+| tax            | REAL    | Configurable rate           |
 | discount       | REAL    |                             |
-| total          | REAL    |                             |
+| serviceCharge  | REAL    | Configurable rate           |
+| orderType      | TEXT    | Dine-in, Takeaway, etc.     |
+| total          | REAL    | With optional rounding      |
 | paymentMethod  | TEXT    | cash or card                |
+| cashierId      | INTEGER | References User             |
 | status         | TEXT    | completed or void           |
 
 ### Customer
-| Field         | Type    | Notes         |
-|---------------|---------|---------------|
-| id            | INTEGER | Auto-increment|
-| name          | TEXT    | Required      |
-| email         | TEXT    | Optional      |
-| phone         | TEXT    | Optional      |
-| address       | TEXT    | Optional      |
-| loyaltyPoints | INTEGER | Default 0     |
-| totalPurchases| REAL    | Default 0     |
+| Field          | Type    | Notes              |
+|----------------|---------|--------------------|
+| id             | INTEGER | Auto-increment     |
+| name           | TEXT    | Required           |
+| email          | TEXT    | Optional           |
+| phone          | TEXT    | Optional           |
+| address        | TEXT    | Optional           |
+| loyaltyPoints  | INTEGER | Earned from sales  |
+| totalPurchases | REAL    | Lifetime total     |
 
 ### Setting
 | Field | Type | Notes           |
@@ -262,40 +297,48 @@ testtoken/
 
 The database auto-seeds on first startup:
 - **3 users**: admin, manager, cashier
-- **4 categories**: Food & Beverages, Electronics, Clothing, Stationery
-- **2 suppliers**: Supplier A, Supplier B
-- **12 products**: 3 per category with realistic data
-- **5 customers**: With varying purchase history and loyalty points
-- **3 default settings**: `pos_currency` (USD), `pos_locale` (en-US)
+- **4 categories**: Electronics, Clothing, Food & Beverage, Home & Garden
+- **2 suppliers**: Tech Supply Co, Fashion Distributors
+- **12 products**: 3 per category with realistic data (names, SKUs, barcodes, prices, stock levels)
+- **5 customers**: With purchase history and loyalty points
+- **16 default settings**: store info, tax (8%), service charge, rounding, payment, order types, currency (USD), locale (en-US), cashier restrictions
 
 ## Receipt Printing
 
 Receipts are designed for 80mm thermal printers:
 - Monospace font, black & white only
 - `@page { size: 80mm auto; margin: 0; }` CSS for correct sizing
-- Store name, address, and contact from settings
+- Store name, address, and phone from settings (editable in Settings page)
 - Line items table with quantities and prices
-- Totals, payment info, and footer
+- Service charge, tax, discount, and totals
+- Order type, payment method, customer info
+- Customizable footer message from settings
+- Hidden page UI during print (only receipt content visible)
 - Triggered via `window.print()` — works with any printer driver
+- Optional auto-print after sale (configurable in Settings)
 
-## Currency & Locale Settings
+## Settings Reference
 
-Admin can configure currency and locale under Settings:
-- **15 preset currencies**: USD, EUR, GBP, JPY, CNY, INR, IDR, BRL, CAD, AUD, KRW, SGD, MYR, PHP, THB
-- **Custom currency**: Enter any currency code (e.g., VND, MXN)
-- **12 locales**: en-US, en-GB, de-DE, fr-FR, ja-JP, zh-CN, id-ID, es-ES, pt-BR, ko-KR, th-TH, vi-VN
-- Changes apply immediately across all pages via `formatCurrency()` reading from localStorage
+All settings are stored as key-value pairs. Admin configures them via the Settings page.
 
-## Audit Logging
-
-All significant actions are logged:
-- **LOGIN / REGISTER**: User authentication events
-- **CREATE / UPDATE / DELETE**: Product, Customer, User changes
-- **VOID**: Sale voiding
-- **STOCK_ADJUST**: Manual stock adjustments
-- **SETTINGS**: Configuration changes
-
-Audit logs include user, timestamp, action type, resource, affected ID, JSON details, and IP address. Viewable under Audit Logs page (admin only) with action/resource filtering and pagination.
+| Key | Default | Description |
+|-----|---------|-------------|
+| store_name | My Store | Store name on receipts |
+| store_address | (empty) | Store address on receipts |
+| store_phone | (empty) | Store phone on receipts |
+| receipt_footer | Thank you for your purchase! | Receipt footer message |
+| tax_rate | 8 | Tax percentage |
+| tax_inclusive | false | Prices already include tax |
+| service_charge_enabled | false | Enable service charge |
+| service_charge_rate | 5 | Service charge percentage |
+| rounding_mode | none | none, nearest_005, nearest_010, nearest_int |
+| default_payment | cash | Pre-selected payment method |
+| receipt_auto_print | false | Auto-print after sale |
+| cashier_hide_prices | false | Hide prices from cashiers |
+| cashier_hide_stock | false | Hide stock from cashiers |
+| order_types | ["Dine-in","Takeaway","Delivery"] | Available order types |
+| currency | USD | Currency code |
+| locale | en-US | Regional locale |
 
 ## Mobile Responsiveness
 
