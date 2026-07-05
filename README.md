@@ -2,6 +2,54 @@
 
 A full-featured Point of Sale (POS) system built with React, Node.js, Express, and SQLite. Supports multi-user role-based access, inventory management, customer loyalty, thermal receipt printing, audit logging, customizable settings (currency, locale, tax, fees, store info), order types, and cashier restrictions.
 
+## Getting Started
+
+### Prerequisites
+- Node.js (v18 or higher)
+- npm or yarn
+
+### Installation
+
+1. **Navigate to the project directory**
+   ```bash
+   cd SimplePOS
+   ```
+
+2. **Install all dependencies**
+   ```bash
+   npm run install-all
+   ```
+   This installs dependencies for root, server, and client.
+
+3. **Start the application (development mode)**
+   ```bash
+   npm run dev
+   ```
+   This starts both servers concurrently:
+   - Backend API on http://localhost:5000
+   - Frontend dev server on http://localhost:5173
+
+   **Or run them separately:**
+   ```bash
+   # Terminal 1 - Backend
+   npm run server
+
+   # Terminal 2 - Frontend
+   npm run client
+   ```
+
+4. **Re-seed the database** (if needed)
+   ```bash
+   rm server/database.sqlite && npm run server
+   ```
+   The database auto-seeds on startup with sample data.
+
+### How It Works
+- The server (`server/server-dev.js`) starts and auto-creates an SQLite database file (`server/database.sqlite`)
+- Tables are synchronized via Sequelize models
+- Sample data is seeded automatically: users, categories, suppliers, products, customers, and settings
+- The client Vite dev server proxies `/api` requests to the backend at `localhost:5000`
+
 ## Features
 
 ### Core Functionality
@@ -62,54 +110,6 @@ A full-featured Point of Sale (POS) system built with React, Node.js, Express, a
 - JWT authentication
 - bcryptjs for password hashing
 - RESTful API design
-
-## Getting Started
-
-### Prerequisites
-- Node.js (v18 or higher)
-- npm or yarn
-
-### Installation
-
-1. **Navigate to the project directory**
-   ```bash
-   cd SimplePOS
-   ```
-
-2. **Install all dependencies**
-   ```bash
-   npm run install-all
-   ```
-   This installs dependencies for root, server, and client.
-
-3. **Start the application (development mode)**
-   ```bash
-   npm run dev
-   ```
-   This starts both servers concurrently:
-   - Backend API on http://localhost:5000
-   - Frontend dev server on http://localhost:5173
-
-   **Or run them separately:**
-   ```bash
-   # Terminal 1 - Backend
-   npm run server
-
-   # Terminal 2 - Frontend
-   npm run client
-   ```
-
-4. **Re-seed the database** (if needed)
-   ```bash
-   rm server/database.sqlite && npm run server
-   ```
-   The database auto-seeds on startup with sample data.
-
-### How It Works
-- The server (`server/server-dev.js`) starts and auto-creates an SQLite database file (`server/database.sqlite`)
-- Tables are synchronized via Sequelize models
-- Sample data is seeded automatically: users, categories, suppliers, products, customers, and settings
-- The client Vite dev server proxies `/api` requests to the backend at `localhost:5000`
 
 ## Default Login Credentials
 
