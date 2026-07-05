@@ -1,39 +1,31 @@
-const Sale = require('../models/Sale');
-const Product = require('../models/Product');
-const Customer = require('../models/Customer');
-const generateTransactionId = require('../utils/transactionId');
+const { Sale, Product, Customer } = require('../models');
+const { Op } = require('sequelize');
+
+const generateTransactionId = () => {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 8);
+  return `TXN-${timestamp}-${random}`.toUpperCase();
+};
 
 exports.createSale = async (req, res, next) => {
   try {
-    const { items, customer, subtotal, tax, discount, total, paymentMethod, notes } = req.body;
+    const { items, customerId, subtotal, tax, discount, total, paymentMethod, notes } = req.body;
 
     if (!items || items.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide at least one item'
-      });
+      return res.status(400).json({ success: false, message: 'Please provide at least one item' });
     }
 
     for (const item of items) {
-      const product = await Product.findById(item.product);
-
+      const product = await Product.findByPk(item.product);
       if (!product) {
-        return res.status(404).json({
-          success: false,
-          message: `Product not found: ${item.product}`
-        });
+        return res.status(404).json({ success: false, message: `Product not found: ${item.product}` });
       }
-
       if (product.stock < item.quantity) {
-        return res.status(400).json({
-          success: false,
-          message: `Insufficient stock for ${product.name}. Available: ${product.stock}`
-        });
+        return res.status(400).json({ success: false, message: `Insufficient stock for ${product.name}. Available: ${product.stock}` });
       }
     }
 
     const transactionId = generateTransactionId();
-
     const saleItems = items.map(item => ({
       ...item,
       subtotal: item.price * item.quantity
@@ -42,47 +34,34 @@ exports.createSale = async (req, res, next) => {
     const sale = await Sale.create({
       transactionId,
       items: saleItems,
-      customer: customer || null,
+      customerId: customerId || null,
       subtotal,
       tax,
       discount,
       total,
       paymentMethod,
-      cashier: req.user._id,
+      cashierId: req.user.id,
       status: 'completed'
     });
 
     for (const item of items) {
-      await Product.findByIdAndUpdate(
-        item.product,
-        { $inc: { stock: -item.quantity } }
-      );
+      const product = await Product.findByPk(item.product);
+      await product.update({ stock: product.stock - item.quantity });
     }
 
-    if (customer) {
-      const loyaltyPoints = Math.floor(total / 10);
-      await Customer.findByIdAndUpdate(
-        customer,
-        {
-          $inc: {
-            loyaltyPoints: loyaltyPoints,
-            totalPurchases: total
-          },
+    if (customerId) {
+      const customer = await Customer.findByPk(customerId);
+      if (customer) {
+        const loyaltyPoints = Math.floor(total / 10);
+        await customer.update({
+          loyaltyPoints: customer.loyaltyPoints + loyaltyPoints,
+          totalPurchases: parseFloat(customer.totalPurchases) + parseFloat(total),
           lastPurchase: new Date()
-        }
-      );
+        });
+      }
     }
 
-    const populatedSale = await Sale.findById(sale._id)
-      .populate('items.product', 'name sku')
-      .populate('customer', 'name email')
-      .populate('cashier', 'username');
-
-    res.status(201).json({
-      success: true,
-      data: populatedSale,
-      message: 'Sale completed successfully'
-    });
+    res.status(201).json({ success: true, data: sale, message: 'Sale completed successfully' });
   } catch (error) {
     next(error);
   }
@@ -90,46 +69,30 @@ exports.createSale = async (req, res, next) => {
 
 exports.getSales = async (req, res, next) => {
   try {
-    const {
-      startDate,
-      endDate,
-      cashier,
-      status,
-      paymentMethod,
-      page = 1,
-      limit = 20
-    } = req.query;
+    const { startDate, endDate, cashierId, status, paymentMethod, page = 1, limit = 20 } = req.query;
 
-    const query = {};
-
+    const where = {};
     if (startDate || endDate) {
-      query.createdAt = {};
-      if (startDate) query.createdAt.$gte = new Date(startDate);
-      if (endDate) query.createdAt.$lte = new Date(endDate);
+      where.createdAt = {};
+      if (startDate) where.createdAt[Op.gte] = new Date(startDate);
+      if (endDate) where.createdAt[Op.lte] = new Date(endDate);
     }
+    if (cashierId) where.cashierId = cashierId;
+    if (status) where.status = status;
+    if (paymentMethod) where.paymentMethod = paymentMethod;
 
-    if (cashier) query.cashier = cashier;
-    if (status) query.status = status;
-    if (paymentMethod) query.paymentMethod = paymentMethod;
-
-    const sales = await Sale.find(query)
-      .populate('items.product', 'name sku')
-      .populate('customer', 'name')
-      .populate('cashier', 'username')
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
-
-    const count = await Sale.countDocuments(query);
+    const offset = (page - 1) * limit;
+    const { count, rows } = await Sale.findAndCountAll({
+      where,
+      limit: parseInt(limit),
+      offset,
+      order: [['createdAt', 'DESC']]
+    });
 
     res.status(200).json({
       success: true,
-      data: sales,
-      pagination: {
-        total: count,
-        page: parseInt(page),
-        pages: Math.ceil(count / limit)
-      }
+      data: rows,
+      pagination: { total: count, page: parseInt(page), pages: Math.ceil(count / limit) }
     });
   } catch (error) {
     next(error);
@@ -138,22 +101,11 @@ exports.getSales = async (req, res, next) => {
 
 exports.getSale = async (req, res, next) => {
   try {
-    const sale = await Sale.findById(req.params.id)
-      .populate('items.product', 'name sku price')
-      .populate('customer', 'name email phone')
-      .populate('cashier', 'username email');
-
+    const sale = await Sale.findByPk(req.params.id);
     if (!sale) {
-      return res.status(404).json({
-        success: false,
-        message: 'Sale not found'
-      });
+      return res.status(404).json({ success: false, message: 'Sale not found' });
     }
-
-    res.status(200).json({
-      success: true,
-      data: sale
-    });
+    res.status(200).json({ success: true, data: sale });
   } catch (error) {
     next(error);
   }
@@ -161,24 +113,12 @@ exports.getSale = async (req, res, next) => {
 
 exports.holdTransaction = async (req, res, next) => {
   try {
-    const sale = await Sale.findByIdAndUpdate(
-      req.params.id,
-      { status: 'hold' },
-      { new: true }
-    );
-
+    const sale = await Sale.findByPk(req.params.id);
     if (!sale) {
-      return res.status(404).json({
-        success: false,
-        message: 'Sale not found'
-      });
+      return res.status(404).json({ success: false, message: 'Sale not found' });
     }
-
-    res.status(200).json({
-      success: true,
-      data: sale,
-      message: 'Transaction placed on hold'
-    });
+    await sale.update({ status: 'hold' });
+    res.status(200).json({ success: true, data: sale, message: 'Transaction placed on hold' });
   } catch (error) {
     next(error);
   }
@@ -186,24 +126,12 @@ exports.holdTransaction = async (req, res, next) => {
 
 exports.completeTransaction = async (req, res, next) => {
   try {
-    const sale = await Sale.findByIdAndUpdate(
-      req.params.id,
-      { status: 'completed' },
-      { new: true }
-    );
-
+    const sale = await Sale.findByPk(req.params.id);
     if (!sale) {
-      return res.status(404).json({
-        success: false,
-        message: 'Sale not found'
-      });
+      return res.status(404).json({ success: false, message: 'Sale not found' });
     }
-
-    res.status(200).json({
-      success: true,
-      data: sale,
-      message: 'Transaction completed'
-    });
+    await sale.update({ status: 'completed' });
+    res.status(200).json({ success: true, data: sale, message: 'Transaction completed' });
   } catch (error) {
     next(error);
   }
@@ -211,42 +139,32 @@ exports.completeTransaction = async (req, res, next) => {
 
 exports.voidTransaction = async (req, res, next) => {
   try {
-    const sale = await Sale.findById(req.params.id);
-
+    const sale = await Sale.findByPk(req.params.id);
     if (!sale) {
-      return res.status(404).json({
-        success: false,
-        message: 'Sale not found'
-      });
+      return res.status(404).json({ success: false, message: 'Sale not found' });
     }
 
-    for (const item of sale.items) {
-      await Product.findByIdAndUpdate(
-        item.product,
-        { $inc: { stock: item.quantity } }
-      );
+    const items = sale.items;
+    for (const item of items) {
+      const product = await Product.findByPk(item.product);
+      if (product) {
+        await product.update({ stock: product.stock + item.quantity });
+      }
     }
 
-    if (sale.customer) {
-      const loyaltyPoints = Math.floor(sale.total / 10);
-      await Customer.findByIdAndUpdate(
-        sale.customer,
-        {
-          $inc: {
-            loyaltyPoints: -loyaltyPoints,
-            totalPurchases: -sale.total
-          }
-        }
-      );
+    if (sale.customerId) {
+      const customer = await Customer.findByPk(sale.customerId);
+      if (customer) {
+        const loyaltyPoints = Math.floor(sale.total / 10);
+        await customer.update({
+          loyaltyPoints: Math.max(0, customer.loyaltyPoints - loyaltyPoints),
+          totalPurchases: Math.max(0, parseFloat(customer.totalPurchases) - parseFloat(sale.total))
+        });
+      }
     }
 
-    sale.status = 'void';
-    await sale.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Transaction voided successfully'
-    });
+    await sale.update({ status: 'void' });
+    res.status(200).json({ success: true, message: 'Transaction voided successfully' });
   } catch (error) {
     next(error);
   }

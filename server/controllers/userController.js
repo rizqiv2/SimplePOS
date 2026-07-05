@@ -1,13 +1,21 @@
-const User = require('../models/User');
+const { User } = require('../models');
 
 exports.getUsers = async (req, res, next) => {
   try {
-    const users = await User.find().select('-password').sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      data: users
+    const users = await User.findAll({
+      attributes: { exclude: ['password'] },
+      order: [['createdAt', 'DESC']]
     });
+
+    const mapped = users.map(u => ({
+      _id: u.id,
+      username: u.username,
+      email: u.email,
+      role: u.role,
+      createdAt: u.createdAt
+    }));
+
+    res.status(200).json({ success: true, data: mapped });
   } catch (error) {
     next(error);
   }
@@ -15,19 +23,11 @@ exports.getUsers = async (req, res, next) => {
 
 exports.getUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
-
+    const user = await User.findByPk(req.params.id, { attributes: { exclude: ['password'] } });
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
-
-    res.status(200).json({
-      success: true,
-      data: user
-    });
+    res.status(200).json({ success: true, data: user });
   } catch (error) {
     next(error);
   }
@@ -37,30 +37,21 @@ exports.updateUser = async (req, res, next) => {
   try {
     const { password, ...updateData } = req.body;
 
-    let user = await User.findById(req.params.id);
-
+    const user = await User.findByPk(req.params.id);
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
-
-    Object.assign(user, updateData);
 
     if (password) {
-      user.password = password;
+      const bcrypt = require('bcryptjs');
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(password, salt);
     }
 
-    await user.save();
+    await user.update(updateData);
+    const updated = await User.findByPk(user.id, { attributes: { exclude: ['password'] } });
 
-    user = await User.findById(user._id).select('-password');
-
-    res.status(200).json({
-      success: true,
-      data: user,
-      message: 'User updated successfully'
-    });
+    res.status(200).json({ success: true, data: updated, message: 'User updated successfully' });
   } catch (error) {
     next(error);
   }
@@ -68,19 +59,12 @@ exports.updateUser = async (req, res, next) => {
 
 exports.deleteUser = async (req, res, next) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
-
+    const user = await User.findByPk(req.params.id);
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
-
-    res.status(200).json({
-      success: true,
-      message: 'User deleted successfully'
-    });
+    await user.destroy();
+    res.status(200).json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
     next(error);
   }

@@ -1,43 +1,43 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const customerSchema = new mongoose.Schema({
+const Customer = sequelize.define('Customer', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   name: {
-    type: String,
-    required: [true, 'Please provide customer name'],
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   email: {
-    type: String,
-    trim: true,
-    lowercase: true,
-    sparse: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
+    type: DataTypes.STRING,
+    validate: {
+      isEmail: true
+    }
   },
   phone: {
-    type: String,
-    trim: true
+    type: DataTypes.STRING
   },
   address: {
-    type: String,
-    trim: true
+    type: DataTypes.TEXT
   },
   loyaltyPoints: {
-    type: Number,
-    default: 0,
-    min: [0, 'Loyalty points cannot be negative']
+    type: DataTypes.INTEGER,
+    defaultValue: 0
   },
   totalPurchases: {
-    type: Number,
-    default: 0,
-    min: [0, 'Total purchases cannot be negative']
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0
   },
   lastPurchase: {
-    type: Date
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+    type: DataTypes.DATE
   }
+}, {
+  timestamps: true,
+  createdAt: 'createdAt',
+  updatedAt: false
 });
 
-module.exports = mongoose.model('Customer', customerSchema);
+module.exports = Customer;

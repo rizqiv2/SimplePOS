@@ -1,3 +1,226 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Receipt Card (screen) ── */
+.receipt-card {
+  width: 320px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  padding: 24px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #1a1a1a;
+}
+
+/* ── Receipt shared (screen + print) ── */
+.receipt-header {
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.receipt-store-name {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.receipt-store-info {
+  font-size: 10px;
+  color: #555;
+}
+
+.receipt-divider {
+  text-align: center;
+  letter-spacing: -1px;
+  margin: 6px 0;
+  color: #888;
+}
+
+.receipt-thin-divider {
+  text-align: center;
+  letter-spacing: -1px;
+  margin: 3px 0;
+  color: #aaa;
+}
+
+.receipt-transaction {
+  margin: 2px 0;
+}
+
+.receipt-line {
+  display: flex;
+  justify-content: space-between;
+  margin: 1px 0;
+}
+
+.receipt-label {
+  color: #555;
+}
+
+.receipt-value {
+  font-weight: 600;
+}
+
+.receipt-items {
+  margin: 2px 0;
+}
+
+.receipt-items-header {
+  display: flex;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #333;
+  padding: 2px 0;
+}
+
+.receipt-col-item {
+  flex: 1;
+}
+
+.receipt-col-qty {
+  width: 32px;
+  text-align: center;
+}
+
+.receipt-col-price {
+  width: 64px;
+  text-align: right;
+}
+
+.receipt-col-total {
+  width: 64px;
+  text-align: right;
+}
+
+.receipt-item {
+  padding: 3px 0;
+}
+
+.receipt-item-row {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+}
+
+.receipt-item-row .receipt-col-item {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.receipt-totals {
+  margin: 2px 0;
+}
+
+.receipt-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 2px 0;
+}
+
+.receipt-payment {
+  margin: 2px 0;
+}
+
+.receipt-capitalize {
+  text-transform: capitalize;
+}
+
+.receipt-footer {
+  text-align: center;
+}
+
+.receipt-thanks {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.receipt-footer-note {
+  font-size: 9px;
+  color: #777;
+  margin-top: 2px;
+}
+
+/* ── Print-only receipt ── */
+.receipt-print {
+  display: none;
+}
+
+/* ── Print styles ── */
+@media print {
+  @page {
+    margin: 0;
+    size: 80mm auto;
+  }
+
+  .receipt-screen {
+    display: none !important;
+  }
+
+  .receipt-print {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 72mm;
+    padding: 3mm 4mm;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10pt;
+    line-height: 1.35;
+    color: #000;
+    background: #fff;
+  }
+
+  .receipt-print .receipt-store-name {
+    font-size: 14pt;
+    letter-spacing: 1px;
+  }
+
+  .receipt-print .receipt-store-info {
+    font-size: 8pt;
+    color: #000;
+  }
+
+  .receipt-print .receipt-divider {
+    margin: 4pt 0;
+    color: #000;
+  }
+
+  .receipt-print .receipt-thin-divider {
+    margin: 2pt 0;
+    color: #555;
+  }
+
+  .receipt-print .receipt-items-header {
+    font-size: 9pt;
+  }
+
+  .receipt-print .receipt-item-row {
+    font-size: 9pt;
+  }
+
+  .receipt-print .receipt-total {
+    font-size: 12pt;
+  }
+
+  .receipt-print .receipt-thanks {
+    font-size: 12pt;
+  }
+
+  .receipt-print .receipt-footer-note {
+    font-size: 7pt;
+    color: #555;
+  }
+
+  .receipt-print .receipt-label {
+    color: #000;
+  }
+}

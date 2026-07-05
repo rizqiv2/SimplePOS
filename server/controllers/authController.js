@@ -1,32 +1,26 @@
-const User = require('../models/User');
+const { User } = require('../models');
 const generateToken = require('../utils/generateToken');
+const bcrypt = require('bcryptjs');
 
 exports.register = async (req, res, next) => {
   try {
     const { username, email, password, role } = req.body;
 
-    const userExists = await User.findOne({ $or: [{ email }, { username }] });
-
-    if (userExists) {
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
       return res.status(400).json({
         success: false,
         message: 'User already exists'
       });
     }
 
-    const user = await User.create({
-      username,
-      email,
-      password,
-      role: role || 'cashier'
-    });
-
-    const token = generateToken(user._id);
+    const user = await User.create({ username, email, password, role: role || 'cashier' });
+    const token = generateToken(user.id);
 
     res.status(201).json({
       success: true,
       data: {
-        _id: user._id,
+        _id: user.id,
         username: user.username,
         email: user.email,
         role: user.role,
@@ -50,7 +44,7 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ where: { email } });
 
     if (!user) {
       return res.status(401).json({
@@ -68,12 +62,12 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user.id);
 
     res.status(200).json({
       success: true,
       data: {
-        _id: user._id,
+        _id: user.id,
         username: user.username,
         email: user.email,
         role: user.role,
@@ -88,7 +82,7 @@ exports.login = async (req, res, next) => {
 
 exports.getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user = await User.findByPk(req.user.id);
 
     res.status(200).json({
       success: true,

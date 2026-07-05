@@ -1,53 +1,43 @@
-const Sale = require('../models/Sale');
-const Product = require('../models/Product');
-const Customer = require('../models/Customer');
+const { Sale, Product, Customer, User } = require('../models');
+const { Op, fn, col } = require('sequelize');
 
 exports.getSalesSummary = async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query;
-
-    const matchStage = { status: 'completed' };
+    const where = { status: 'completed' };
     if (startDate || endDate) {
-      matchStage.createdAt = {};
-      if (startDate) matchStage.createdAt.$gte = new Date(startDate);
-      if (endDate) matchStage.createdAt.$lte = new Date(endDate);
+      where.createdAt = {};
+      if (startDate) where.createdAt[Op.gte] = new Date(startDate);
+      if (endDate) where.createdAt[Op.lte] = new Date(endDate);
     }
 
-    const summary = await Sale.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          _id: null,
-          totalSales: { $sum: 1 },
-          totalRevenue: { $sum: '$total' },
-          averageOrderValue: { $avg: '$total' },
-          totalDiscount: { $sum: '$discount' },
-          totalTax: { $sum: '$tax' }
-        }
-      }
-    ]);
+    const summary = await Sale.findOne({
+      where,
+      attributes: [
+        [fn('COUNT', col('id')), 'totalSales'],
+        [fn('COALESCE', fn('SUM', col('total')), 0), 'totalRevenue'],
+        [fn('COALESCE', fn('AVG', col('total')), 0), 'averageOrderValue'],
+        [fn('COALESCE', fn('SUM', col('discount')), 0), 'totalDiscount'],
+        [fn('COALESCE', fn('SUM', col('tax')), 0), 'totalTax']
+      ],
+      raw: true
+    });
 
-    const paymentMethodBreakdown = await Sale.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          _id: '$paymentMethod',
-          count: { $sum: 1 },
-          total: { $sum: '$total' }
-        }
-      }
-    ]);
+    const paymentMethodBreakdown = await Sale.findAll({
+      where,
+      attributes: [
+        'paymentMethod',
+        [fn('COUNT', col('id')), 'count'],
+        [fn('COALESCE', fn('SUM', col('total')), 0), 'total']
+      ],
+      group: ['paymentMethod'],
+      raw: true
+    });
 
     res.status(200).json({
       success: true,
       data: {
-        summary: summary[0] || {
-          totalSales: 0,
-          totalRevenue: 0,
-          averageOrderValue: 0,
-          totalDiscount: 0,
-          totalTax: 0
-        },
+        summary: summary || { totalSales: 0, totalRevenue: 0, averageOrderValue: 0, totalDiscount: 0, totalTax: 0 },
         paymentMethods: paymentMethodBreakdown
       }
     });
@@ -58,49 +48,32 @@ exports.getSalesSummary = async (req, res, next) => {
 
 exports.getRevenue = async (req, res, next) => {
   try {
-    const { startDate, endDate, groupBy = 'day' } = req.query;
-
-    const matchStage = { status: 'completed' };
-    if (startDate || endDate) {
-      matchStage.createdAt = {};
-      if (startDate) matchStage.createdAt.$gte = new Date(startDate);
-      if (endDate) matchStage.createdAt.$lte = new Date(endDate);
+    const where = { status: 'completed' };
+    if (req.query.startDate || req.query.endDate) {
+      where.createdAt = {};
+      if (req.query.startDate) where.createdAt[Op.gte] = new Date(req.query.startDate);
+      if (req.query.endDate) where.createdAt[Op.lte] = new Date(req.query.endDate);
     }
 
-    let dateFormat;
-    switch (groupBy) {
-      case 'hour':
-        dateFormat = { $dateToString: { format: '%Y-%m-%d %H:00', date: '$createdAt' } };
-        break;
-      case 'day':
-        dateFormat = { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } };
-        break;
-      case 'week':
-        dateFormat = { $dateToString: { format: '%Y-W%V', date: '$createdAt' } };
-        break;
-      case 'month':
-        dateFormat = { $dateToString: { format: '%Y-%m', date: '$createdAt' } };
-        break;
-      default:
-        dateFormat = { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } };
-    }
-
-    const revenue = await Sale.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          _id: dateFormat,
-          revenue: { $sum: '$total' },
-          sales: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
-
-    res.status(200).json({
-      success: true,
-      data: revenue
+    const revenue = await Sale.findAll({
+      where,
+      attributes: [
+        [fn('DATE', col('createdAt')), 'date'],
+        [fn('COALESCE', fn('SUM', col('total')), 0), 'revenue'],
+        [fn('COUNT', col('id')), 'sales']
+      ],
+      group: [fn('DATE', col('createdAt'))],
+      order: [[fn('DATE', col('createdAt')), 'ASC']],
+      raw: true
     });
+
+    const result = revenue.map(r => ({
+      _id: r.date,
+      revenue: parseFloat(r.revenue),
+      sales: parseInt(r.sales)
+    }));
+
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
     next(error);
   }
@@ -108,44 +81,31 @@ exports.getRevenue = async (req, res, next) => {
 
 exports.getTopProducts = async (req, res, next) => {
   try {
-    const { startDate, endDate, limit = 10 } = req.query;
-
-    const matchStage = { status: 'completed' };
-    if (startDate || endDate) {
-      matchStage.createdAt = {};
-      if (startDate) matchStage.createdAt.$gte = new Date(startDate);
-      if (endDate) matchStage.createdAt.$lte = new Date(endDate);
+    const where = { status: 'completed' };
+    if (req.query.startDate || req.query.endDate) {
+      where.createdAt = {};
+      if (req.query.startDate) where.createdAt[Op.gte] = new Date(req.query.startDate);
+      if (req.query.endDate) where.createdAt[Op.lte] = new Date(req.query.endDate);
     }
 
-    const topProducts = await Sale.aggregate([
-      { $match: matchStage },
-      { $unwind: '$items' },
-      {
-        $group: {
-          _id: '$items.product',
-          productName: { $first: '$items.productName' },
-          totalQuantity: { $sum: '$items.quantity' },
-          totalRevenue: { $sum: '$items.subtotal' },
-          timesSold: { $sum: 1 }
-        }
-      },
-      { $sort: { totalRevenue: -1 } },
-      { $limit: parseInt(limit) },
-      {
-        $lookup: {
-          from: 'products',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'product'
-        }
-      },
-      { $unwind: { path: '$product', preserveNullAndEmptyArrays: true } }
-    ]);
+    const sales = await Sale.findAll({ where, raw: true });
+    const productMap = {};
 
-    res.status(200).json({
-      success: true,
-      data: topProducts
-    });
+    for (const sale of sales) {
+      const items = typeof sale.items === 'string' ? JSON.parse(sale.items) : sale.items;
+      for (const item of items) {
+        if (!productMap[item.product]) {
+          productMap[item.product] = { productId: item.product, productName: item.productName || 'Unknown', totalQuantity: 0, totalRevenue: 0, timesSold: 0 };
+        }
+        productMap[item.product].totalQuantity += item.quantity;
+        productMap[item.product].totalRevenue += item.subtotal || (item.price * item.quantity);
+        productMap[item.product].timesSold += 1;
+      }
+    }
+
+    const limit = parseInt(req.query.limit || 10);
+    const topProducts = Object.values(productMap).sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, limit);
+    res.status(200).json({ success: true, data: topProducts });
   } catch (error) {
     next(error);
   }
@@ -153,57 +113,26 @@ exports.getTopProducts = async (req, res, next) => {
 
 exports.getInventoryValue = async (req, res, next) => {
   try {
-    const inventoryValue = await Product.aggregate([
-      { $match: { status: 'active' } },
-      {
-        $group: {
-          _id: null,
-          totalProducts: { $sum: 1 },
-          totalStock: { $sum: '$stock' },
-          totalCostValue: { $sum: { $multiply: ['$cost', '$stock'] } },
-          totalRetailValue: { $sum: { $multiply: ['$price', '$stock'] } }
-        }
-      }
-    ]);
+    const products = await Product.findAll({ where: { status: 'active' }, raw: true });
 
-    const lowStockCount = await Product.countDocuments({
-      $expr: { $lt: ['$stock', '$minStock'] },
-      status: 'active'
-    });
+    const totalProducts = products.length;
+    const totalStock = products.reduce((sum, p) => sum + p.stock, 0);
+    const totalCostValue = products.reduce((sum, p) => sum + (parseFloat(p.cost || 0) * p.stock), 0);
+    const totalRetailValue = products.reduce((sum, p) => sum + (parseFloat(p.price) * p.stock), 0);
+    const lowStockCount = products.filter(p => p.stock < p.minStock).length;
 
-    const byCategory = await Product.aggregate([
-      { $match: { status: 'active' } },
-      {
-        $group: {
-          _id: '$category',
-          count: { $sum: 1 },
-          totalStock: { $sum: '$stock' },
-          value: { $sum: { $multiply: ['$price', '$stock'] } }
-        }
-      },
-      {
-        $lookup: {
-          from: 'categories',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'category'
-        }
-      },
-      { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } }
-    ]);
+    const categoryMap = {};
+    for (const p of products) {
+      const catId = p.categoryId || 'uncategorized';
+      if (!categoryMap[catId]) categoryMap[catId] = { _id: catId, category: null, count: 0, totalStock: 0, value: 0 };
+      categoryMap[catId].count += 1;
+      categoryMap[catId].totalStock += p.stock;
+      categoryMap[catId].value += parseFloat(p.price) * p.stock;
+    }
 
     res.status(200).json({
       success: true,
-      data: {
-        summary: inventoryValue[0] || {
-          totalProducts: 0,
-          totalStock: 0,
-          totalCostValue: 0,
-          totalRetailValue: 0
-        },
-        lowStockCount,
-        byCategory
-      }
+      data: { summary: { totalProducts, totalStock, totalCostValue, totalRetailValue }, lowStockCount, byCategory: Object.values(categoryMap) }
     });
   } catch (error) {
     next(error);
@@ -212,41 +141,33 @@ exports.getInventoryValue = async (req, res, next) => {
 
 exports.getCashierPerformance = async (req, res, next) => {
   try {
-    const { startDate, endDate } = req.query;
-
-    const matchStage = { status: 'completed' };
-    if (startDate || endDate) {
-      matchStage.createdAt = {};
-      if (startDate) matchStage.createdAt.$gte = new Date(startDate);
-      if (endDate) matchStage.createdAt.$lte = new Date(endDate);
+    const where = { status: 'completed' };
+    if (req.query.startDate || req.query.endDate) {
+      where.createdAt = {};
+      if (req.query.startDate) where.createdAt[Op.gte] = new Date(req.query.startDate);
+      if (req.query.endDate) where.createdAt[Op.lte] = new Date(req.query.endDate);
     }
 
-    const performance = await Sale.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          _id: '$cashier',
-          totalSales: { $sum: 1 },
-          totalRevenue: { $sum: '$total' },
-          averageOrderValue: { $avg: '$total' }
-        }
-      },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'cashier'
-        }
-      },
-      { $unwind: '$cashier' },
-      { $sort: { totalRevenue: -1 } }
-    ]);
-
-    res.status(200).json({
-      success: true,
-      data: performance
+    const performance = await Sale.findAll({
+      where,
+      attributes: ['cashierId', [fn('COUNT', col('id')), 'totalSales'], [fn('COALESCE', fn('SUM', col('total')), 0), 'totalRevenue'], [fn('COALESCE', fn('AVG', col('total')), 0), 'averageOrderValue']],
+      group: ['cashierId'],
+      raw: true
     });
+
+    const users = await User.findAll({ attributes: ['id', 'username'], raw: true });
+    const userMap = {};
+    for (const u of users) userMap[u.id] = u.username;
+
+    const result = performance.map(p => ({
+      _id: p.cashierId,
+      cashier: { username: userMap[p.cashierId] || 'Unknown' },
+      totalSales: parseInt(p.totalSales),
+      totalRevenue: parseFloat(p.totalRevenue),
+      averageOrderValue: parseFloat(p.averageOrderValue)
+    }));
+
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
     next(error);
   }

@@ -1,79 +1,69 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const productSchema = new mongoose.Schema({
+const Product = sequelize.define('Product', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   name: {
-    type: String,
-    required: [true, 'Please provide a product name'],
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   description: {
-    type: String,
-    trim: true
+    type: DataTypes.TEXT
   },
   sku: {
-    type: String,
-    required: [true, 'Please provide a SKU'],
-    unique: true,
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
   },
   barcode: {
-    type: String,
-    trim: true,
-    sparse: true
+    type: DataTypes.STRING
   },
-  category: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Category'
+  categoryId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: 'Categories',
+      key: 'id'
+    }
   },
   price: {
-    type: Number,
-    required: [true, 'Please provide a price'],
-    min: [0, 'Price cannot be negative']
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false
   },
   cost: {
-    type: Number,
-    default: 0,
-    min: [0, 'Cost cannot be negative']
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0
   },
   stock: {
-    type: Number,
-    required: [true, 'Please provide stock quantity'],
-    min: [0, 'Stock cannot be negative'],
-    default: 0
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
   },
   minStock: {
-    type: Number,
-    default: 10,
-    min: [0, 'Minimum stock cannot be negative']
+    type: DataTypes.INTEGER,
+    defaultValue: 10
   },
-  supplier: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Supplier'
+  supplierId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: 'Suppliers',
+      key: 'id'
+    }
   },
   image: {
-    type: String,
-    default: ''
+    type: DataTypes.STRING,
+    defaultValue: ''
   },
   status: {
-    type: String,
-    enum: ['active', 'inactive'],
-    default: 'active'
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+    type: DataTypes.ENUM('active', 'inactive'),
+    defaultValue: 'active'
   }
+}, {
+  timestamps: true,
+  updatedAt: 'updatedAt'
 });
 
-productSchema.index({ name: 'text', sku: 'text', barcode: 'text' });
-
-productSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
-});
-
-module.exports = mongoose.model('Product', productSchema);
+module.exports = Product;

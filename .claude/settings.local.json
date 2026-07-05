@@ -8,7 +8,9 @@
       "Bash(lsof -ti:5000)",
       "Bash(npm uninstall *)",
       "Bash(npx tailwindcss *)",
-      "Bash(*)"
+      "Bash(*)",
+      "Bash(node server-dev.js)",
+      "Bash(node /home/rizqiv2/testtoken/server/server-dev.js)"
     ]
   }
 }

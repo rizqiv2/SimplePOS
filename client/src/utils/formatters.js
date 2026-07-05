@@ -1,8 +1,18 @@
+const getCurrency = () => localStorage.getItem('pos_currency') || 'USD';
+const getLocale = () => localStorage.getItem('pos_locale') || 'en-US';
+
 export const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(amount);
+  try {
+    return new Intl.NumberFormat(getLocale(), {
+      style: 'currency',
+      currency: getCurrency()
+    }).format(amount);
+  } catch {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  }
 };
 
 export const formatDate = (date) => {

@@ -9,6 +9,7 @@ import Inventory from './pages/Inventory';
 import Customers from './pages/Customers';
 import Reports from './pages/Reports';
 import Users from './pages/Users';
+import Settings from './pages/Settings';
 import Layout from './components/Layout/Layout';
 
 function App() {
@@ -43,6 +44,14 @@ function App() {
                 element={
                   <ProtectedRoute roles={['admin']}>
                     <Users />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="settings"
+                element={
+                  <ProtectedRoute roles={['admin']}>
+                    <Settings />
                   </ProtectedRoute>
                 }
               />

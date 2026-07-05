@@ -1,37 +1,35 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const supplierSchema = new mongoose.Schema({
+const Supplier = sequelize.define('Supplier', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   name: {
-    type: String,
-    required: [true, 'Please provide supplier name'],
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   contact: {
-    type: String,
-    trim: true
+    type: DataTypes.STRING
   },
   email: {
-    type: String,
-    trim: true,
-    lowercase: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
+    type: DataTypes.STRING,
+    validate: {
+      isEmail: true
+    }
   },
   phone: {
-    type: String,
-    trim: true
+    type: DataTypes.STRING
   },
   address: {
-    type: String,
-    trim: true
-  },
-  products: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product'
-  }],
-  createdAt: {
-    type: Date,
-    default: Date.now
+    type: DataTypes.TEXT
   }
+}, {
+  timestamps: true,
+  createdAt: 'createdAt',
+  updatedAt: false
 });
 
-module.exports = mongoose.model('Supplier', supplierSchema);
+module.exports = Supplier;

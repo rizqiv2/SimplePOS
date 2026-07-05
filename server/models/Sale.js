@@ -1,86 +1,71 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const saleSchema = new mongoose.Schema({
+const Sale = sequelize.define('Sale', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   transactionId: {
-    type: String,
-    required: true,
+    type: DataTypes.STRING,
+    allowNull: false,
     unique: true
   },
-  items: [{
-    product: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Product',
-      required: true
-    },
-    productName: String,
-    quantity: {
-      type: Number,
-      required: true,
-      min: [1, 'Quantity must be at least 1']
-    },
-    price: {
-      type: Number,
-      required: true,
-      min: [0, 'Price cannot be negative']
-    },
-    subtotal: {
-      type: Number,
-      required: true,
-      min: [0, 'Subtotal cannot be negative']
+  items: {
+    type: DataTypes.JSON,
+    allowNull: false
+  },
+  customerId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: 'Customers',
+      key: 'id'
     }
-  }],
-  customer: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Customer'
   },
   subtotal: {
-    type: Number,
-    required: true,
-    min: [0, 'Subtotal cannot be negative']
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false
   },
   tax: {
-    type: Number,
-    default: 0,
-    min: [0, 'Tax cannot be negative']
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0
   },
   discount: {
-    type: Number,
-    default: 0,
-    min: [0, 'Discount cannot be negative']
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0
   },
   total: {
-    type: Number,
-    required: true,
-    min: [0, 'Total cannot be negative']
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false
   },
   paymentMethod: {
-    type: String,
-    enum: ['cash', 'card', 'multiple'],
-    required: true
+    type: DataTypes.ENUM('cash', 'card', 'multiple'),
+    allowNull: false
   },
   paymentStatus: {
-    type: String,
-    enum: ['completed', 'pending', 'failed'],
-    default: 'completed'
+    type: DataTypes.ENUM('completed', 'pending', 'failed'),
+    defaultValue: 'completed'
   },
-  cashier: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+  cashierId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'Users',
+      key: 'id'
+    }
   },
   status: {
-    type: String,
-    enum: ['completed', 'hold', 'void'],
-    default: 'completed'
+    type: DataTypes.ENUM('completed', 'hold', 'void'),
+    defaultValue: 'completed'
   },
   notes: {
-    type: String,
-    trim: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+    type: DataTypes.TEXT
   }
+}, {
+  timestamps: true,
+  createdAt: 'createdAt',
+  updatedAt: false
 });
 
-module.exports = mongoose.model('Sale', saleSchema);
+module.exports = Sale;
